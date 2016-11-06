@@ -7,7 +7,7 @@ var ndjson = require('ndjson')
 var pump = require('pump')
 var levelup = require('level')
 
-var db = levelup('./npm-to-hypercore.db')
+var db = levelup(process.argv[2] || './npm-to-hypercore.db')
 var core = hypercore(db)
 
 core.list(function (err, keys) {

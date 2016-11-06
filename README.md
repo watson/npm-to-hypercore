@@ -9,11 +9,14 @@ them in Hypercore.
 npm install npm-to-hypercore -g
 ```
 
-## Run
+## Usage
 
 ```
-$ npm-to-hypercore
+npm-to-hypercore [db]
 ```
+
+Just run the `npm-to-hypercore` command. Takes an optional `db` argument
+to use as the path to the database.
 
 ## License
 
