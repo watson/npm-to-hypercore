@@ -2,7 +2,7 @@
   "name": "npm-to-hypercore",
   "version": "0.0.0",
   "description": "Stream all of npm metadata into hypercore",
-  "main": "index.js",
+  "bin": "cli.js",
   "dependencies": {
     "changes-stream": "^2.1.0",
     "hypercore": "^4.12.0",
