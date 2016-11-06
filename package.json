@@ -1,0 +1,31 @@
+{
+  "name": "npm-to-hypercore",
+  "version": "0.0.0",
+  "description": "Stream all of npm metadata into hypercore",
+  "main": "index.js",
+  "dependencies": {
+    "changes-stream": "^2.1.0",
+    "hypercore": "^4.12.0",
+    "hyperdrive-archive-swarm": "^5.0.2",
+    "level": "^1.5.0",
+    "ndjson": "^1.4.3",
+    "pump": "^1.0.1"
+  },
+  "devDependencies": {
+    "standard": "^8.5.0"
+  },
+  "scripts": {
+    "test": "standard",
+    "start": "node index.js"
+  },
+  "author": "Thomas Watson Steen <w@tson.dk> (https://twitter.com/wa7son)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/watson/npm-to-hypercore.git"
+  },
+  "bugs": {
+    "url": "https://github.com/watson/npm-to-hypercore/issues"
+  },
+  "homepage": "https://github.com/watson/npm-to-hypercore#readme"
+}
