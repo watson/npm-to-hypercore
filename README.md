@@ -35,7 +35,6 @@ To test it out you can use hypertail
 hypertail /tmp/npm-to-hypercore 503cf9e12d8ae49a07568d90f04bbdbfa3f1998ab97ed2b5143c1f3f69ec052f
 ```
 
-
 ## License
 
 MIT
