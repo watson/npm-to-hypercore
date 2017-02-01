@@ -26,13 +26,13 @@ to use as the path to the database.
 We have an instance of this running already. You can replicate data from it by using this hypercore key
 
 ```
-503cf9e12d8ae49a07568d90f04bbdbfa3f1998ab97ed2b5143c1f3f69ec052f
+8c9c84fe39710950dddf102519f847bc88724a9e9e9fd4f2e1017b700947cb55
 ```
 
 To test it out you can use hypertail
 
 ```
-hypertail /tmp/npm-to-hypercore 503cf9e12d8ae49a07568d90f04bbdbfa3f1998ab97ed2b5143c1f3f69ec052f
+hypertail /tmp/npm-to-hypercore 8c9c84fe39710950dddf102519f847bc88724a9e9e9fd4f2e1017b700947cb55
 ```
 
 ## License
