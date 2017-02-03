@@ -21,7 +21,7 @@ core.list(function (err, keys) {
 
   feed.open(run)
 
-  function run (run) {
+  function run (err) {
     if (err) throw err
 
     var stream = feed.createWriteStream()
