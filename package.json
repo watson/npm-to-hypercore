@@ -4,15 +4,15 @@
   "description": "Stream all of npm metadata into hypercore",
   "bin": "cli.js",
   "dependencies": {
-    "changes-stream": "^2.1.0",
-    "hypercore": "^4.12.0",
-    "hyperdrive-archive-swarm": "^5.0.2",
+    "changes-stream": "^2.2.0",
+    "hypercore": "^4.19.3",
+    "hyperdrive-archive-swarm": "^5.0.5",
     "level": "^1.5.0",
-    "ndjson": "^1.4.3",
-    "pump": "^1.0.1"
+    "ndjson": "^1.5.0",
+    "pump": "^1.0.2"
   },
   "devDependencies": {
-    "standard": "^8.5.0"
+    "standard": "^8.6.0"
   },
   "scripts": {
     "test": "standard",
