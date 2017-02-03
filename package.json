@@ -9,7 +9,9 @@
     "hyperdrive-archive-swarm": "^5.0.5",
     "level": "^1.5.0",
     "ndjson": "^1.5.0",
-    "pump": "^1.0.2"
+    "normalize-registry-metadata": "^1.1.2",
+    "pump": "^1.0.2",
+    "through2": "^2.0.3"
   },
   "devDependencies": {
     "standard": "^8.6.0"
