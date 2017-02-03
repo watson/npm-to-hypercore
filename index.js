@@ -7,11 +7,14 @@ var hypercore = require('hypercore')
 var swarm = require('hyperdrive-archive-swarm')
 var ndjson = require('ndjson')
 var pump = require('pump')
+var afterAll = require('after-all')
 var levelup = require('level')
+var sub = require('subleveldown')
 
 var normalize = through2.obj(function (change, env, cb) {
   var stream = this
   var doc = clean(change.doc)
+  var next = afterAll(cb)
 
   if (!doc) {
     console.log('skipping %s - invalid document', change.id)
@@ -19,15 +22,20 @@ var normalize = through2.obj(function (change, env, cb) {
     console.log('skipping %s - no versions detected', change.id)
   } else {
     Object.keys(doc.versions).forEach(function (version) {
-      stream.push(doc.versions[version])
+      var key = doc.name + '@' + version
+      var done = next()
+      index.get(key, function (err, value) {
+        if (!err || !err.notFound) return done(err)
+        stream.push(doc.versions[version])
+        index.put(key, true, done)
+      })
     })
   }
-
-  cb()
 })
 
 var db = levelup(process.argv[2] || './npm-to-hypercore.db')
-var core = hypercore(db)
+var core = hypercore(sub(db, 'core'))
+var index = sub(db, 'index')
 
 core.list(function (err, keys) {
   if (err) throw err
