@@ -13,8 +13,10 @@ var sub = require('subleveldown')
 
 var normalize = through2.obj(function (change, env, cb) {
   var stream = this
-  var doc = clean(change.doc)
+  var doc = change.doc
   var next = afterAll(cb)
+
+  clean(doc)
 
   if (!doc) {
     console.log('skipping %s - invalid document', change.id)
@@ -27,7 +29,10 @@ var normalize = through2.obj(function (change, env, cb) {
       index.get(key, function (err, value) {
         if (!err || !err.notFound) return done(err)
         stream.push(doc.versions[version])
-        index.put(key, true, done)
+        index.put(key, true, function (err) {
+          if (err) return done(err)
+          index.put('!latest_seq!', change.seq, done)
+        })
       })
     })
   }
@@ -53,21 +58,15 @@ core.list(function (err, keys) {
 
     var stream = feed.createWriteStream()
 
-    if (feed.blocks === 0) {
-      pump(changesSinceStream(), normalize, ndjson.serialize(), stream, run)
-    } else {
-      feed.get(feed.blocks - 1, function (err, block) {
-        if (err) throw err
-        var seq = JSON.parse(block).seq
-        pump(changesSinceStream(seq), normalize, ndjson.serialize(), stream, run)
-      })
-    }
+    index.get('!latest_seq!', function (err, value) {
+      var seq = value || 0
+      if (err && !err.notFound) throw err
+      pump(changesSinceStream(seq), normalize, ndjson.serialize(), stream, run)
+    })
   }
 })
 
 function changesSinceStream (seq) {
-  seq = seq || 0
-
   console.log('feching changes since sequence #%s', seq)
 
   return new ChangesStream({
