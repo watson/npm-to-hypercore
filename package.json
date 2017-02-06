@@ -1,6 +1,6 @@
 {
   "name": "npm-to-hypercore",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Stream all of npm metadata into hypercore",
   "bin": "cli.js",
   "dependencies": {
@@ -31,7 +31,7 @@
   },
   "homepage": "https://github.com/watson/npm-to-hypercore#readme",
   "coordinates": [
-    55.777561879687376,
-    12.58987330422974
+    55.6810222,
+    12.5644369
   ]
 }
