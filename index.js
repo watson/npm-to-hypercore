@@ -14,7 +14,10 @@ var sub = require('subleveldown')
 var normalize = through2.obj(function (change, env, cb) {
   var stream = this
   var doc = change.doc
-  var next = afterAll(cb)
+  var next = afterAll(function (err) {
+    if (err) return cb(err)
+    index.put('!latest_seq!', change.seq, cb)
+  })
 
   clean(doc)
 
@@ -29,10 +32,7 @@ var normalize = through2.obj(function (change, env, cb) {
       index.get(key, function (err, value) {
         if (!err || !err.notFound) return done(err)
         stream.push(doc.versions[version])
-        index.put(key, true, function (err) {
-          if (err) return done(err)
-          index.put('!latest_seq!', change.seq, done)
-        })
+        index.put(key, true, done)
       })
     })
   }
