@@ -1,5 +1,6 @@
 'use strict'
 
+var path = require('path')
 var ChangesStream = require('changes-stream')
 var clean = require('normalize-registry-metadata')
 var through2 = require('through2')
@@ -42,7 +43,10 @@ var normalize = through2.obj(function (change, env, cb) {
   }
 })
 
-var db = levelup(process.argv[2] || './npm-to-hypercore.db')
+var dbPath = process.argv[2] || './npm-to-hypercore.db'
+console.log('db location: %s', path.resolve(dbPath))
+
+var db = levelup(dbPath)
 var core = hypercore(sub(db, 'core'))
 var index = sub(db, 'index')
 var block = 0
