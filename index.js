@@ -8,7 +8,6 @@ var hypercore = require('hypercore')
 var swarm = require('hyperdrive-archive-swarm')
 var ndjson = require('ndjson')
 var pump = require('pump')
-var afterAll = require('after-all')
 var levelup = require('level')
 var sub = require('subleveldown')
 
@@ -20,11 +19,12 @@ var core = hypercore(sub(db, 'core'))
 var index = sub(db, 'index')
 var normalize = through2.obj(transform)
 var block = 0
+var feed
 
 core.list(function (err, keys) {
   if (err) throw err
 
-  var feed = core.createFeed(keys[0])
+  feed = core.createFeed(keys[0])
 
   console.log('hypercore key:', feed.key.toString('hex'))
 
@@ -35,18 +35,21 @@ core.list(function (err, keys) {
   function run (err) {
     if (err) throw err
 
-    var stream = feed.createWriteStream()
-
-    getNextSeqNo(function (err, seq) {
+    recoverFromBadShutdown(function (err) {
       if (err) throw err
-      pump(changesSinceStream(seq), normalize, ndjson.serialize(), stream, run)
+
+      var stream = feed.createWriteStream()
+
+      getNextSeqNo(function (err, seq) {
+        if (err) throw err
+        console.log('feching changes since sequence #%s', seq)
+        pump(changesSinceStream(seq), normalize, ndjson.serialize(), stream, run)
+      })
     })
   }
 })
 
 function changesSinceStream (seq) {
-  console.log('feching changes since sequence #%s', seq)
-
   return new ChangesStream({
     db: 'https://replicate.npmjs.com',
     include_docs: true,
@@ -58,10 +61,6 @@ function changesSinceStream (seq) {
 function transform (change, env, cb) {
   var stream = this
   var doc = change.doc
-  var next = afterAll(function (err) {
-    if (err) return cb(err)
-    index.put('!latest_seq!', change.seq, cb)
-  })
 
   clean(doc)
 
@@ -70,18 +69,32 @@ function transform (change, env, cb) {
 
   if (!doc) {
     console.log('[%s] skipping %s - invalid document', seq, change.id)
+    done()
+    return
   } else if (!doc.versions || doc.versions.length === 0) {
     console.log('[%s - %s] skipping %s - no versions detected', ts, seq, change.id)
-  } else {
-    Object.keys(doc.versions).forEach(function (version) {
-      var key = doc.name + '@' + version
-      var done = next()
-      index.get(key, function (err, value) {
-        if (!err || !err.notFound) return done(err)
-        stream.push(doc.versions[version])
-        if (++block % 10000 === 0) console.log('[%s - %s] processed %d blocks since last restart', ts, seq, block)
-        index.put(key, true, done)
-      })
+    done()
+    return
+  }
+
+  var versions = Object.keys(doc.versions)
+  processVersion()
+
+  function done (err) {
+    if (err) return cb(err)
+    index.put('!latest_seq!', change.seq, cb)
+  }
+
+  function processVersion (err) {
+    if (err) return done(err)
+    var version = versions.shift()
+    if (!version) return done()
+    var key = change.id + '@' + version
+    index.get(key, function (err) {
+      if (!err || !err.notFound) return processVersion(err)
+      stream.push(doc.versions[version])
+      if (++block % 10000 === 0) console.log('[%s - %s] processed %d blocks since last restart', ts, seq, block)
+      index.put(key, true, processVersion)
     })
   }
 }
@@ -92,4 +105,36 @@ function getNextSeqNo (cb) {
     else if (err) cb(err)
     else cb(null, parseInt(seq, 10) + 1)
   })
+}
+
+// This function expects that there's no gab in the index. So if it
+// successfully locates key in the index there must no missing keys prior to
+// that.
+function recoverFromBadShutdown (cb) {
+  console.log('validating index...')
+  recover()
+
+  function recover (block) {
+    if (block !== 0 && !block) block = feed.blocks - 1
+    if (block === -1) return done()
+    feed.get(block, function (err, data) {
+      if (err) return done(err)
+      var pkg = JSON.parse(data)
+      var key = pkg.name + '@' + pkg.version
+      index.get(key, function (err) {
+        if (!err || !err.notFound) return done(err)
+        console.log('warning: block %d (%s) not indexed - recovering...', block, key)
+        index.put(key, true, function (err) {
+          if (err) return done(err)
+          recover(block - 1)
+        })
+      })
+    })
+  }
+
+  function done (err) {
+    if (err) return cb(err)
+    console.log('index is up to date')
+    cb()
+  }
 }
