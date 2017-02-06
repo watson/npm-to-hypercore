@@ -21,10 +21,13 @@ var normalize = through2.obj(function (change, env, cb) {
 
   clean(doc)
 
+  var ts = doc.time && doc.time.modified
+  var seq = change.seq
+
   if (!doc) {
-    console.log('skipping %s - invalid document', change.id)
+    console.log('[%s - %s] skipping %s - invalid document', ts, seq, change.id)
   } else if (!doc.versions || doc.versions.length === 0) {
-    console.log('skipping %s - no versions detected', change.id)
+    console.log('[%s - %s] skipping %s - no versions detected', ts, seq, change.id)
   } else {
     Object.keys(doc.versions).forEach(function (version) {
       var key = doc.name + '@' + version
@@ -32,6 +35,7 @@ var normalize = through2.obj(function (change, env, cb) {
       index.get(key, function (err, value) {
         if (!err || !err.notFound) return done(err)
         stream.push(doc.versions[version])
+        if (++block % 10000 === 0) console.log('[%s - %s] processed %d blocks since last restart', ts, seq, block)
         index.put(key, true, done)
       })
     })
@@ -41,6 +45,7 @@ var normalize = through2.obj(function (change, env, cb) {
 var db = levelup(process.argv[2] || './npm-to-hypercore.db')
 var core = hypercore(sub(db, 'core'))
 var index = sub(db, 'index')
+var block = 0
 
 core.list(function (err, keys) {
   if (err) throw err
