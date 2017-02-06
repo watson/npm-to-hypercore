@@ -37,9 +37,8 @@ core.list(function (err, keys) {
 
     var stream = feed.createWriteStream()
 
-    index.get('!latest_seq!', function (err, value) {
-      var seq = value || 0
-      if (err && !err.notFound) throw err
+    getNextSeqNo(function (err, seq) {
+      if (err) throw err
       pump(changesSinceStream(seq), normalize, ndjson.serialize(), stream, run)
     })
   }
@@ -85,4 +84,12 @@ function transform (change, env, cb) {
       })
     })
   }
+}
+
+function getNextSeqNo (cb) {
+  index.get('!latest_seq!', function (err, seq) {
+    if (err && err.notFound) cb(null, 0)
+    else if (err) cb(err)
+    else cb(null, parseInt(seq, 10) + 1)
+  })
 }
