@@ -8,7 +8,6 @@
     "hypercore": "^4.19.3",
     "hyperdrive-archive-swarm": "^5.0.5",
     "level": "^1.5.0",
-    "ndjson": "^1.5.0",
     "normalize-registry-metadata": "^1.1.2",
     "pump": "^1.0.2",
     "subleveldown": "^2.1.0",

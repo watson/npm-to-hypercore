@@ -6,7 +6,6 @@ var clean = require('normalize-registry-metadata')
 var through2 = require('through2')
 var hypercore = require('hypercore')
 var swarm = require('hyperdrive-archive-swarm')
-var ndjson = require('ndjson')
 var pump = require('pump')
 var levelup = require('level')
 var sub = require('subleveldown')
@@ -18,7 +17,7 @@ var db = levelup(dbPath)
 var core = hypercore(sub(db, 'core'))
 var index = sub(db, 'index')
 var normalize = through2.obj(transform)
-var feed, latestBlock
+var feed
 
 core.list(function (err, keys) {
   if (err) throw err
@@ -30,17 +29,12 @@ core.list(function (err, keys) {
 
 function run (err) {
   if (err) throw err
-  latestBlock = feed.blocks
-
   recoverFromBadShutdown(function (err) {
     if (err) throw err
-
-    var stream = feed.createWriteStream()
-
     getNextSeqNo(function (err, seq) {
       if (err) throw err
       console.log('feching changes since sequence #%s', seq)
-      pump(changesSinceStream(seq), normalize, ndjson.serialize(), stream, run)
+      pump(changesSinceStream(seq), normalize, run)
     })
   })
 }
@@ -55,7 +49,6 @@ function changesSinceStream (seq) {
 }
 
 function transform (change, env, cb) {
-  var stream = this
   var doc = change.doc
 
   clean(doc)
@@ -88,9 +81,11 @@ function transform (change, env, cb) {
     var key = change.id + '@' + version
     index.get(key, function (err) {
       if (!err || !err.notFound) return processVersion(err)
-      stream.push(doc.versions[version])
-      if (++latestBlock % 1000 === 0) console.log('pushed %d blocks (seq: %s, modified: %s)', latestBlock, seq, modified)
-      index.put(key, true, processVersion)
+      feed.append(JSON.stringify(doc.versions[version]), function (err) {
+        if (err) return done(err)
+        if (feed.blocks % 1000 === 0) console.log('appended %d blocks (seq: %s, modified: %s)', feed.blocks, seq, modified)
+        index.put(key, true, processVersion)
+      })
     })
   }
 }
