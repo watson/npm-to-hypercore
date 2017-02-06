@@ -18,36 +18,32 @@ var db = levelup(dbPath)
 var core = hypercore(sub(db, 'core'))
 var index = sub(db, 'index')
 var normalize = through2.obj(transform)
-var feed, block
+var feed, latestBlock
 
 core.list(function (err, keys) {
   if (err) throw err
-
   feed = core.createFeed(keys[0])
-
   console.log('hypercore key:', feed.key.toString('hex'))
-
   swarm(feed)
-
   feed.open(run)
-
-  function run (err) {
-    if (err) throw err
-    block = feed.blocks
-
-    recoverFromBadShutdown(function (err) {
-      if (err) throw err
-
-      var stream = feed.createWriteStream()
-
-      getNextSeqNo(function (err, seq) {
-        if (err) throw err
-        console.log('feching changes since sequence #%s', seq)
-        pump(changesSinceStream(seq), normalize, ndjson.serialize(), stream, run)
-      })
-    })
-  }
 })
+
+function run (err) {
+  if (err) throw err
+  latestBlock = feed.blocks
+
+  recoverFromBadShutdown(function (err) {
+    if (err) throw err
+
+    var stream = feed.createWriteStream()
+
+    getNextSeqNo(function (err, seq) {
+      if (err) throw err
+      console.log('feching changes since sequence #%s', seq)
+      pump(changesSinceStream(seq), normalize, ndjson.serialize(), stream, run)
+    })
+  })
+}
 
 function changesSinceStream (seq) {
   return new ChangesStream({
@@ -93,7 +89,7 @@ function transform (change, env, cb) {
     index.get(key, function (err) {
       if (!err || !err.notFound) return processVersion(err)
       stream.push(doc.versions[version])
-      if (++block % 1000 === 0) console.log('pushed %d blocks (seq: %s, modified: %s)', block, seq, modified)
+      if (++latestBlock % 1000 === 0) console.log('pushed %d blocks (seq: %s, modified: %s)', latestBlock, seq, modified)
       index.put(key, true, processVersion)
     })
   }
@@ -115,7 +111,7 @@ function recoverFromBadShutdown (cb) {
   recover()
 
   function recover (block) {
-    if (block !== 0 && !block) block = feed.blocks - 1
+    if (block === undefined) block = feed.blocks - 1
     if (block === -1) return done()
     feed.get(block, function (err, data) {
       if (err) return done(err)
