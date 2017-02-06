@@ -64,15 +64,15 @@ function transform (change, env, cb) {
 
   clean(doc)
 
-  var ts = doc && doc.time && doc.time.modified
+  var modified = doc && doc.time && doc.time.modified
   var seq = change.seq
 
   if (!doc) {
-    console.log('[%s] skipping %s - invalid document', seq, change.id)
+    console.log('skipping %s - invalid document (seq: %s)', change.id, seq)
     done()
     return
   } else if (!doc.versions || doc.versions.length === 0) {
-    console.log('[%s - %s] skipping %s - no versions detected', ts, seq, change.id)
+    console.log('skipping %s - no versions detected (seq: %s, modified: %s)', change.id, seq, modified)
     done()
     return
   }
@@ -93,7 +93,7 @@ function transform (change, env, cb) {
     index.get(key, function (err) {
       if (!err || !err.notFound) return processVersion(err)
       stream.push(doc.versions[version])
-      if (++block % 10000 === 0) console.log('[%s - %s] processed %d blocks since last restart', ts, seq, block)
+      if (++block % 1000 === 0) console.log('pushed %d blocks (seq: %s, modified: %s)', block, seq, modified)
       index.put(key, true, processVersion)
     })
   }
