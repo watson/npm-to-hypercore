@@ -12,43 +12,13 @@ var afterAll = require('after-all')
 var levelup = require('level')
 var sub = require('subleveldown')
 
-var normalize = through2.obj(function (change, env, cb) {
-  var stream = this
-  var doc = change.doc
-  var next = afterAll(function (err) {
-    if (err) return cb(err)
-    index.put('!latest_seq!', change.seq, cb)
-  })
-
-  clean(doc)
-
-  var ts = doc.time && doc.time.modified
-  var seq = change.seq
-
-  if (!doc) {
-    console.log('[%s - %s] skipping %s - invalid document', ts, seq, change.id)
-  } else if (!doc.versions || doc.versions.length === 0) {
-    console.log('[%s - %s] skipping %s - no versions detected', ts, seq, change.id)
-  } else {
-    Object.keys(doc.versions).forEach(function (version) {
-      var key = doc.name + '@' + version
-      var done = next()
-      index.get(key, function (err, value) {
-        if (!err || !err.notFound) return done(err)
-        stream.push(doc.versions[version])
-        if (++block % 10000 === 0) console.log('[%s - %s] processed %d blocks since last restart', ts, seq, block)
-        index.put(key, true, done)
-      })
-    })
-  }
-})
-
 var dbPath = process.argv[2] || './npm-to-hypercore.db'
 console.log('db location: %s', path.resolve(dbPath))
 
 var db = levelup(dbPath)
 var core = hypercore(sub(db, 'core'))
 var index = sub(db, 'index')
+var normalize = through2.obj(transform)
 var block = 0
 
 core.list(function (err, keys) {
@@ -84,4 +54,35 @@ function changesSinceStream (seq) {
     since: seq,
     highWaterMark: 4 // reduce memory - default is 16
   })
+}
+
+function transform (change, env, cb) {
+  var stream = this
+  var doc = change.doc
+  var next = afterAll(function (err) {
+    if (err) return cb(err)
+    index.put('!latest_seq!', change.seq, cb)
+  })
+
+  clean(doc)
+
+  var ts = doc && doc.time && doc.time.modified
+  var seq = change.seq
+
+  if (!doc) {
+    console.log('[%s] skipping %s - invalid document', seq, change.id)
+  } else if (!doc.versions || doc.versions.length === 0) {
+    console.log('[%s - %s] skipping %s - no versions detected', ts, seq, change.id)
+  } else {
+    Object.keys(doc.versions).forEach(function (version) {
+      var key = doc.name + '@' + version
+      var done = next()
+      index.get(key, function (err, value) {
+        if (!err || !err.notFound) return done(err)
+        stream.push(doc.versions[version])
+        if (++block % 10000 === 0) console.log('[%s - %s] processed %d blocks since last restart', ts, seq, block)
+        index.put(key, true, done)
+      })
+    })
+  }
 }
