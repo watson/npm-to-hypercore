@@ -18,8 +18,7 @@ var db = levelup(dbPath)
 var core = hypercore(sub(db, 'core'))
 var index = sub(db, 'index')
 var normalize = through2.obj(transform)
-var block = 0
-var feed
+var feed, block
 
 core.list(function (err, keys) {
   if (err) throw err
@@ -34,6 +33,7 @@ core.list(function (err, keys) {
 
   function run (err) {
     if (err) throw err
+    block = feed.blocks
 
     recoverFromBadShutdown(function (err) {
       if (err) throw err
