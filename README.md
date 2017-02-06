@@ -1,7 +1,8 @@
 # npm-to-hypercore
 
 A simple data fetcher that streams all changes made to npm and stores
-them in Hypercore.
+them in Hypercore. The changes are stored such that each version of a
+package that's released is one block in Hypercore.
 
 [![Build status](https://travis-ci.org/watson/npm-to-hypercore.svg?branch=master)](https://travis-ci.org/watson/npm-to-hypercore)
 [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat)](https://github.com/feross/standard)
