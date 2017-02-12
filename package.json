@@ -5,12 +5,12 @@
   "bin": "cli.js",
   "dependencies": {
     "changes-stream": "^2.2.0",
-    "hypercore": "^4.19.3",
+    "hypercore": "5.0.0-rc.0",
     "hyperdrive-archive-swarm": "^5.0.5",
     "level": "^1.5.0",
+    "mkdirp": "^0.5.1",
     "normalize-registry-metadata": "^1.1.2",
     "pump": "^1.0.2",
-    "subleveldown": "^2.1.0",
     "through2": "^2.0.3"
   },
   "devDependencies": {

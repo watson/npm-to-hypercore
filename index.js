@@ -1,30 +1,27 @@
 'use strict'
 
 var path = require('path')
+var mkdirp = require('mkdirp')
 var ChangesStream = require('changes-stream')
 var clean = require('normalize-registry-metadata')
 var through2 = require('through2')
 var hypercore = require('hypercore')
 var swarm = require('hyperdrive-archive-swarm')
 var pump = require('pump')
-var levelup = require('level')
-var sub = require('subleveldown')
+var level = require('level')
 
-var dbPath = process.argv[2] || './npm-to-hypercore.db'
-console.log('db location: %s', path.resolve(dbPath))
+var dbRoot = process.argv[2] || path.join('.', 'npm-to-hypercore.db')
+console.log('db location: %s', path.resolve(dbRoot))
+mkdirp(dbRoot)
 
-var db = levelup(dbPath)
-var core = hypercore(sub(db, 'core'))
-var index = sub(db, 'index')
+var feed = hypercore(path.join(dbRoot, 'hypercore'), {valueEncoding: 'json'})
+var db = level(path.join(dbRoot, 'index'))
 var normalize = through2.obj(transform)
-var feed
 
-core.list(function (err, keys) {
-  if (err) throw err
-  feed = core.createFeed(keys[0])
+feed.ready(function () {
   console.log('hypercore key:', feed.key.toString('hex'))
   swarm(feed)
-  feed.open(run)
+  run()
 })
 
 function run (err) {
@@ -71,7 +68,7 @@ function transform (change, env, cb) {
 
   function done (err) {
     if (err) return cb(err)
-    index.put('!latest_seq!', change.seq, cb)
+    db.put('!latest_seq!', change.seq, cb)
   }
 
   function processVersion (err) {
@@ -79,19 +76,19 @@ function transform (change, env, cb) {
     var version = versions.shift()
     if (!version) return done()
     var key = change.id + '@' + version
-    index.get(key, function (err) {
+    db.get(key, function (err) {
       if (!err || !err.notFound) return processVersion(err)
-      feed.append(JSON.stringify(doc.versions[version]), function (err) {
+      feed.append(doc.versions[version], function (err) {
         if (err) return done(err)
-        if (feed.blocks % 1000 === 0) console.log('appended %d blocks (seq: %s, modified: %s)', feed.blocks, seq, modified)
-        index.put(key, true, processVersion)
+        if (feed.length % 1000 === 0) console.log('appended %d blocks (seq: %s, modified: %s)', feed.length, seq, modified)
+        db.put(key, true, processVersion)
       })
     })
   }
 }
 
 function getNextSeqNo (cb) {
-  index.get('!latest_seq!', function (err, seq) {
+  db.get('!latest_seq!', function (err, seq) {
     if (err && err.notFound) cb(null, 0)
     else if (err) cb(err)
     else cb(null, parseInt(seq, 10) + 1)
@@ -105,19 +102,18 @@ function recoverFromBadShutdown (cb) {
   console.log('validating index...')
   recover()
 
-  function recover (block) {
-    if (block === undefined) block = feed.blocks - 1
-    if (block === -1) return done()
-    feed.get(block, function (err, data) {
+  function recover (index) {
+    if (index === undefined) index = feed.length - 1
+    if (index === -1) return done()
+    feed.get(index, function (err, pkg) {
       if (err) return done(err)
-      var pkg = JSON.parse(data)
       var key = pkg.name + '@' + pkg.version
-      index.get(key, function (err) {
+      db.get(key, function (err) {
         if (!err || !err.notFound) return done(err)
-        console.log('warning: block %d (%s) not indexed - recovering...', block, key)
-        index.put(key, true, function (err) {
+        console.log('warning: block %d (%s) not indexed - recovering...', index, key)
+        db.put(key, true, function (err) {
           if (err) return done(err)
-          recover(block - 1)
+          recover(index - 1)
         })
       })
     })
