@@ -7,7 +7,7 @@
     "changes-stream": "^2.2.0",
     "hypercore": "^5.0.3",
     "hyperdrive-archive-swarm": "^5.0.5",
-    "level": "^1.5.0",
+    "level": "^1.6.0",
     "mkdirp": "^0.5.1",
     "normalize-registry-metadata": "^1.1.2",
     "pump": "^1.0.2",
