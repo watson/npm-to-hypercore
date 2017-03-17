@@ -5,7 +5,7 @@
   "bin": "cli.js",
   "dependencies": {
     "changes-stream": "^2.2.0",
-    "hypercore": "^5.4.0",
+    "hypercore": "^5.4.2",
     "hyperdrive-archive-swarm": "^5.0.5",
     "level": "^1.6.0",
     "mkdirp": "^0.5.1",
